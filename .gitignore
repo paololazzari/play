@@ -1,0 +1,8 @@
+play
+play.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
