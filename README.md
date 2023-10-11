@@ -30,6 +30,8 @@ $ go build -o /usr/local/bin/
 ./play <program>
 ```
 
+N.B. The program must be installed on your machine.
+
 ## Key bindings
 
 | Component       | Key           | Description |
