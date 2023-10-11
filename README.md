@@ -32,6 +32,14 @@ $ go build -o /usr/local/bin/
 
 N.B. The program must be installed on your machine.
 
+The input is evaluated immediately as you type without any validation.
+If you want to use `play` in read-only mode, thus avoding any file changes (such as those that would result if, for instance, `sed -i` was used), then you can use a docker container:
+
+```bash
+$ docker run --rm -it -v "$(pwd)":/play:ro plazzari/play:latest <program>
+```
+
+
 ## Key bindings
 
 | Component       | Key           | Description |
