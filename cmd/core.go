@@ -67,6 +67,22 @@ var (
 			run(program.NewProgram("awk", true))
 		},
 	}
+
+	jqCmd = &cobra.Command{
+		Use:   "jq",
+		Short: `Play with jq`,
+		Run: func(cmd *cobra.Command, args []string) {
+			run(program.NewProgram("jq", false))
+		},
+	}
+
+	yqCmd = &cobra.Command{
+		Use:   "yq",
+		Short: `Play with yq`,
+		Run: func(cmd *cobra.Command, args []string) {
+			run(program.NewProgram("yq", false))
+		},
+	}
 )
 
 func exitWithError(e interface{}) {
@@ -121,6 +137,8 @@ func init() {
 	rootCmd.AddCommand(grepCmd)
 	rootCmd.AddCommand(sedCmd)
 	rootCmd.AddCommand(awkCmd)
+	rootCmd.AddCommand(jqCmd)
+	rootCmd.AddCommand(yqCmd)
 	rootCmd.AddCommand(completion) // https://github.com/spf13/cobra/issues/1507
 }
 
