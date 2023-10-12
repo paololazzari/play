@@ -6,6 +6,21 @@ import (
 	"runtime"
 )
 
+// Program being used
+type Program struct {
+	Name                 string
+	RespectsEndOfOptions bool
+}
+
+// Program constructor
+func NewProgram(name string, respectsEndOfOptions bool) Program {
+	program := Program{
+		Name:                 name,
+		RespectsEndOfOptions: respectsEndOfOptions,
+	}
+	return program
+}
+
 // Execute the given command in either bash or powershell depending on the detected os
 func shellout(command string, silent bool) (string, string, error) {
 	var stdout bytes.Buffer

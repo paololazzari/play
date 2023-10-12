@@ -27,6 +27,7 @@ const (
 type UI struct {
 	App                   *tview.Application
 	Label                 string
+	EndOfOptionsSeparator bool
 	CommandText           *tview.TextView
 	OptionsInput          *tview.InputField
 	EndOptionsText        *tview.TextView
@@ -34,7 +35,7 @@ type UI struct {
 	ArgumentsInput        *tview.InputField
 	ArgumentsInputWide    *tview.TextArea
 	ClosingQuoteText      *tview.TextView
-	PaddingText           *tview.TextView
+	EndArgumentsText      *tview.TextView
 	FileOptionsStdin      string
 	FileOptionsText       *tview.TextView
 	FileOptionsTreeNode   *tview.TreeNode
@@ -64,10 +65,15 @@ func optionsInput() *tview.InputField {
 		SetPlaceholderStyle(tcell.StyleDefault)
 }
 
-// Returns the TextView with the separator
+// Returns the TextView for the options separator
 func endOptionsText() *tview.TextView {
 	return tview.NewTextView().
-		SetText(" -- ").
+		SetTextColor(titleColor)
+}
+
+// Returns the TextView for the arguments separator
+func endArgumentsText() *tview.TextView {
+	return tview.NewTextView().
 		SetTextColor(titleColor)
 }
 
@@ -100,11 +106,6 @@ func argumentsInputWide() *tview.TextArea {
 func closingQuoteText() *tview.TextView {
 	return tview.NewTextView().
 		SetText("'")
-}
-
-// Returns the TextView used for padding
-func paddingText() *tview.TextView {
-	return tview.NewTextView()
 }
 
 // Returns the TextView for the input files
@@ -182,18 +183,19 @@ func getFileOptionsText(a *[]string) string {
 }
 
 // UI constructor
-func NewUI(label string, stdin string) *UI {
+func NewUI(program string, respectsEndOfOptions bool, stdin string) *UI {
 	ui := &UI{
 		App:                   tview.NewApplication(),
-		Label:                 label,
-		CommandText:           commandText(label),
+		Label:                 program,
+		EndOfOptionsSeparator: respectsEndOfOptions,
+		CommandText:           commandText(program),
 		OptionsInput:          optionsInput(),
 		EndOptionsText:        endOptionsText(),
 		OpeningQuoteText:      openingQuoteText(),
 		ArgumentsInput:        argumentsInput(),
 		ArgumentsInputWide:    argumentsInputWide(),
 		ClosingQuoteText:      closingQuoteText(),
-		PaddingText:           paddingText(),
+		EndArgumentsText:      endArgumentsText(),
 		FileOptionsStdin:      stdin,
 		FileOptionsText:       fileOptionsText(),
 		FileOptionsTreeNode:   fileOptionsTreeNode(),
@@ -215,11 +217,18 @@ func (ui *UI) evaluateExpression() func() {
 		sb.WriteString(ui.Label)
 		sb.WriteString(" ")
 		sb.WriteString(ui.OptionsInput.GetText())
-		sb.WriteString(" -- ")
+		if ui.EndOfOptionsSeparator {
+			sb.WriteString(" -- ")
+		} else {
+			sb.WriteString(" ")
+		}
 		sb.WriteString(ui.OpeningQuoteText.GetText(false))
 		sb.WriteString(ui.ArgumentsInput.GetText())
 		sb.WriteString(ui.ClosingQuoteText.GetText(false))
 		sb.WriteString(" ")
+		if !ui.EndOfOptionsSeparator {
+			sb.WriteString(" -- ")
+		}
 		if t := ui.FileOptionsText.GetText(false); t != "<input files>" {
 			if len(ui.FileOptionsStdin) > 0 && len(ui.FileOptionsInputSlice) == 0 {
 				sb.WriteString("<<<")
@@ -461,6 +470,24 @@ func (ui *UI) configFileView() {
 	})
 }
 
+// Helper function
+func (ui *UI) endOptionsSeparator() (*tview.TextView, int, int, bool) {
+	if ui.EndOfOptionsSeparator {
+		return ui.EndOptionsText.SetText(" -- "), 4, 1, false
+	} else {
+		return ui.EndOptionsText.SetText(" "), 1, 1, false
+	}
+}
+
+// Helper function
+func (ui *UI) endArgumentsSeparator() (*tview.TextView, int, int, bool) {
+	if ui.EndOfOptionsSeparator {
+		return ui.EndArgumentsText.SetText(" "), 1, 1, false
+	} else {
+		return ui.EndArgumentsText.SetText(" -- "), 4, 1, false
+	}
+}
+
 // Function for configuring Flex Flex
 func (ui *UI) configFlex() {
 	ui.Flex.AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
@@ -468,11 +495,11 @@ func (ui *UI) configFlex() {
 		AddItem(tview.NewFlex().SetDirection(tview.FlexColumn).
 			AddItem(ui.CommandText, len(ui.Label)+4, 1, false).
 			AddItem(ui.OptionsInput, 17, 1, false).
-			AddItem(ui.EndOptionsText, 4, 1, false).
+			AddItem(ui.endOptionsSeparator()).
 			AddItem(ui.OpeningQuoteText, 1, 1, false).
 			AddItem(ui.ArgumentsInput, 22, 1, false).
 			AddItem(ui.ClosingQuoteText, 1, 1, false).
-			AddItem(ui.PaddingText, 1, 1, false).
+			AddItem(ui.endArgumentsSeparator()).
 			AddItem(ui.FileOptionsText, 0, 1, false).
 			AddItem(tview.NewBox(), 2, 1, false), 3, 1, false).
 		AddItem(tview.NewFlex().SetDirection(tview.FlexColumn).

@@ -8,11 +8,12 @@ import (
 	"runtime"
 
 	ui "github.com/paololazzari/play/src/ui"
+	program "github.com/paololazzari/play/src/util"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )
 
-const version = "0.1.0"
+const version = "0.2.0"
 
 func completionCommand() *cobra.Command {
 	return &cobra.Command{
@@ -47,7 +48,7 @@ var (
 		Use:   "grep",
 		Short: `Play with grep`,
 		Run: func(cmd *cobra.Command, args []string) {
-			run("grep")
+			run(program.NewProgram("grep", true))
 		},
 	}
 
@@ -55,7 +56,7 @@ var (
 		Use:   "sed",
 		Short: `Play with sed`,
 		Run: func(cmd *cobra.Command, args []string) {
-			run("sed")
+			run(program.NewProgram("sed", true))
 		},
 	}
 
@@ -63,7 +64,7 @@ var (
 		Use:   "awk",
 		Short: `Play with awk`,
 		Run: func(cmd *cobra.Command, args []string) {
-			run("awk")
+			run(program.NewProgram("awk", true))
 		},
 	}
 )
@@ -86,7 +87,7 @@ func validateProgramExists(program string) {
 	}
 }
 
-func run(command string) error {
+func run(program program.Program) error {
 
 	var userInterface *ui.UI
 	input := ""
@@ -107,7 +108,7 @@ func run(command string) error {
 		}
 	}
 
-	userInterface = ui.NewUI(command, input)
+	userInterface = ui.NewUI(program.Name, program.RespectsEndOfOptions, input)
 	userInterface.InitUI()
 	userInterface.Run()
 	return nil
