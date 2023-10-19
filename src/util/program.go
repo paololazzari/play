@@ -2,6 +2,7 @@ package program
 
 import (
 	"bytes"
+	"fmt"
 	"os/exec"
 	"runtime"
 )
@@ -41,6 +42,7 @@ func Run(command string) (res string, err error) {
 
 	stdout, stderr, err := shellout(command, true)
 	if err != nil {
+		stderr = stderr + fmt.Sprint(err)
 		return stderr, nil
 	}
 
