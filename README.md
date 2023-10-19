@@ -55,3 +55,7 @@ $ docker run --rm -it -v "$(pwd)":/play:ro plazzari/play:latest <program>
 | File picker          | `Shift+Tab`   | Move focus to positional arguments options |
 | File picker          | `Ctrl+O`      | Open selected file/Close selected file | 
 | Output               | `Esc`         | Move focus to previous component |
+
+# Credits
+
+The lovely gopher was created with [gopherkon](https://github.com/quasilyte/gopherkon).
