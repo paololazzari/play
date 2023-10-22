@@ -48,6 +48,21 @@ type UI struct {
 	ActiveInput           **tview.InputField
 }
 
+type nodeReference struct {
+	path         string
+	fileContents string
+}
+
+func getNodePath(node *tview.TreeNode) string {
+	ref := node.GetReference()
+	return ref.(nodeReference).path
+}
+
+func getNodeFileContents(node *tview.TreeNode) string {
+	ref := node.GetReference()
+	return ref.(nodeReference).fileContents
+}
+
 // Returns the TextView with the command itself
 func commandText(label string) *tview.TextView {
 	return tview.NewTextView().
@@ -268,7 +283,8 @@ func add(target *tview.TreeNode, path string, ui *UI) {
 		node := tview.NewTreeNode(file.Name())
 
 		// set custom reference with full path
-		node.SetReference(filepath.Join(path, file.Name()))
+		nodeRef := nodeReference{filepath.Join(path, file.Name()), ""}
+		node.SetReference(nodeRef)
 
 		if file.IsDir() {
 			node.SetColor(tcell.ColorGreen)
@@ -279,8 +295,11 @@ func add(target *tview.TreeNode, path string, ui *UI) {
 			scanner := bufio.NewScanner(f)
 			scanner.Split(bufio.ScanLines)
 			scanner.Scan()
-			if utf8.ValidString(string(scanner.Text())) {
+			text := string(scanner.Text())
+			if utf8.ValidString(text) {
 				target.AddChild(node)
+				nodeRef := nodeReference{filepath.Join(path, file.Name()), text}
+				node.SetReference(nodeRef)
 			}
 		}
 	}
@@ -386,6 +405,8 @@ func (ui *UI) configFileOptionsInput() {
 func (ui *UI) configFileOptionsTreeNode() {
 	rootDir := "."
 	ui.FileOptionsTreeNode = tview.NewTreeNode(rootDir)
+	nodeRef := nodeReference{"", ""}
+	ui.FileOptionsTreeNode.SetReference(nodeRef)
 	add(ui.FileOptionsTreeNode, rootDir, ui)
 }
 
@@ -395,27 +416,26 @@ func (ui *UI) configFileOptionsTreeView() {
 	defaultColor := ui.FileOptionsTreeNode.GetColor()
 
 	ui.FileOptionsTreeView.SetSelectedFunc(func(node *tview.TreeNode) {
-		reference := node.GetReference()
 
-		if reference == nil {
+		nodePath := getNodePath(node)
+		if nodePath == "" {
 			return
 		}
-		if stat, _ := os.Stat(reference.(string)); !stat.IsDir() {
+		if stat, _ := os.Stat(nodePath); !stat.IsDir() {
 			if node.GetColor() == tcell.ColorRed {
 				node.SetColor(defaultColor)
 			} else {
 				node.SetColor(tcell.ColorRed)
 			}
 			// when a file is selected, update the sorted, unique list of files
-			updateFileOptionsInput(ui.FileOptionsInputMap, &ui.FileOptionsInputSlice, reference.(string))
+			updateFileOptionsInput(ui.FileOptionsInputMap, &ui.FileOptionsInputSlice, nodePath)
 			ui.FileOptionsText.SetText(getFileOptionsText(&ui.FileOptionsInputSlice))
 			ui.OutputView.ScrollToBeginning()
 			return
 		}
 		children := node.GetChildren()
 		if len(children) == 0 {
-			path := reference.(string)
-			add(node, path, ui)
+			add(node, nodePath, ui)
 		} else {
 			node.SetExpanded(!node.IsExpanded())
 		}
@@ -435,7 +455,7 @@ func (ui *UI) configFileOptionsTreeView() {
 			if ui.FileOptionsTreeView.GetCurrentNode() == ui.FileOptionsTreeView.GetRoot() {
 				return event
 			}
-			file, err := os.ReadFile(ui.FileOptionsTreeView.GetCurrentNode().GetReference().(string))
+			file, err := os.ReadFile(getNodePath(ui.FileOptionsTreeView.GetCurrentNode()))
 			if err == nil {
 				ui.FileView.SetText(string(file))
 				ui.App.SetRoot(ui.FileView, true).
