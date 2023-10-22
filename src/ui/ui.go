@@ -369,6 +369,10 @@ func (ui *UI) configArgumentsInputWide() {
 			ui.App.SetRoot(ui.Flex, true).
 				SetFocus(ui.ArgumentsInput)
 			ui.ArgumentsInput.SetText(ui.ArgumentsInputWide.GetText())
+		case tcell.KeyEsc:
+			ui.App.SetRoot(ui.Flex, true).
+				SetFocus(ui.ArgumentsInput)
+			ui.ArgumentsInput.SetText(ui.ArgumentsInputWide.GetText())
 		}
 		return event
 	})
@@ -485,7 +489,11 @@ func (ui *UI) configFileView() {
 		case tcell.KeyCtrlO:
 			ui.App.SetRoot(ui.Flex, true).
 				SetFocus(ui.FileOptionsTreeView)
+		case tcell.KeyEsc:
+			ui.App.SetRoot(ui.Flex, true).
+				SetFocus(ui.FileOptionsTreeView)
 		}
+
 		return event
 	})
 }
