@@ -273,6 +273,17 @@ func (ui *UI) changedText() func() {
 	}
 }
 
+// Helper function to exclude certain file types from file picker
+func isExtensionInvalid(fileExtension string) bool {
+	invalidExtensions := [...]string{".gif", ".png"}
+	for _, invalidExtension := range invalidExtensions {
+		if invalidExtension == fileExtension {
+			return true
+		}
+	}
+	return false
+}
+
 // Helper function for populating nodes of TreeNode
 func add(target *tview.TreeNode, path string, ui *UI) {
 	files, err := ioutil.ReadDir(path)
@@ -296,7 +307,8 @@ func add(target *tview.TreeNode, path string, ui *UI) {
 			scanner.Split(bufio.ScanLines)
 			scanner.Scan()
 			text := string(scanner.Text())
-			if utf8.ValidString(text) {
+			fileExtension := filepath.Ext(file.Name())
+			if utf8.ValidString(text) && !isExtensionInvalid(fileExtension) {
 				target.AddChild(node)
 				nodeRef := nodeReference{filepath.Join(path, file.Name()), text}
 				node.SetReference(nodeRef)
