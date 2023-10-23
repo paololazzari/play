@@ -49,8 +49,8 @@ type UI struct {
 }
 
 type nodeReference struct {
-	path         string
-	fileContents string
+	path                string
+	partialFileContents string
 }
 
 func getNodePath(node *tview.TreeNode) string {
@@ -58,9 +58,9 @@ func getNodePath(node *tview.TreeNode) string {
 	return ref.(nodeReference).path
 }
 
-func getNodeFileContents(node *tview.TreeNode) string {
+func getNodePartialFileContents(node *tview.TreeNode) string {
 	ref := node.GetReference()
-	return ref.(nodeReference).fileContents
+	return ref.(nodeReference).partialFileContents
 }
 
 // Returns the TextView with the command itself
@@ -471,9 +471,13 @@ func (ui *UI) configFileOptionsTreeView() {
 			if ui.FileOptionsTreeView.GetCurrentNode() == ui.FileOptionsTreeView.GetRoot() {
 				return event
 			}
-			file, err := os.ReadFile(getNodePath(ui.FileOptionsTreeView.GetCurrentNode()))
+			filename := getNodePath(ui.FileOptionsTreeView.GetCurrentNode())
+			file, err := os.ReadFile(filename)
 			if err == nil {
-				ui.FileView.SetText(string(file))
+				fileContents := string(file)
+				Colorize(getNodePartialFileContents(ui.FileOptionsTreeView.GetCurrentNode()), fileContents, filename)
+				ui.FileView.SetText(buff.String())
+				ui.FileView.SetBackgroundColor(tcell.GetColor(backGroundColor))
 				ui.App.SetRoot(ui.FileView, true).
 					SetFocus(ui.FileView)
 			}

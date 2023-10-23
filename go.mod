@@ -3,6 +3,7 @@ module github.com/paololazzari/play
 go 1.18
 
 require (
+	github.com/alecthomas/chroma v0.10.0
 	github.com/gdamore/tcell/v2 v2.6.0
 	github.com/rivo/tview v0.0.0-20230916092115-0ad06c2ea3dd
 	github.com/spf13/cobra v1.7.0
@@ -11,6 +12,7 @@ require (
 )
 
 require (
+	github.com/dlclark/regexp2 v1.4.0 // indirect
 	github.com/gdamore/encoding v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
