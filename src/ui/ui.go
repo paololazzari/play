@@ -2,6 +2,7 @@ package ui
 
 import (
 	"bufio"
+	"fmt"
 
 	"io/ioutil"
 	"os"
@@ -568,6 +569,31 @@ func (ui *UI) InitUI() error {
 	ui.configOutputView()
 	ui.configFileView()
 	ui.configFlex()
+
+	// on Ctrl+S shut down the application and print the expression to stdout
+	ui.App.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		key := event.Key()
+		switch key {
+		case tcell.KeyCtrlS:
+			endOptionsSeparator, _, _, _ := ui.endOptionsSeparator()
+			endArgumentsSeparator, _, _, _ := ui.endArgumentsSeparator()
+
+			var sb strings.Builder
+			sb.WriteString(ui.Label)
+			sb.WriteString(" ")
+			sb.WriteString(ui.OptionsInput.GetText())
+			sb.WriteString(endOptionsSeparator.GetText(false))
+			sb.WriteString(ui.OpeningQuoteText.GetText(false))
+			sb.WriteString(ui.ArgumentsInput.GetText())
+			sb.WriteString(ui.ClosingQuoteText.GetText(false))
+			sb.WriteString(endArgumentsSeparator.GetText(false))
+			sb.WriteString(strings.Join(ui.FileOptionsInputSlice, " "))
+
+			ui.App.Stop()
+			fmt.Println(sb.String())
+		}
+		return event
+	})
 
 	ui.App.SetRoot(ui.Flex, true).
 		SetFocus(ui.OptionsInput)

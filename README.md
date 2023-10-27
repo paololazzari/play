@@ -39,11 +39,16 @@ If you want to use `play` in read-only mode, thus avoding any file changes (such
 $ docker run --rm -it -v "$(pwd)":/play:ro plazzari/play:latest <program>
 ```
 
+To exit the application, use `Ctrl+C`.
+
+To exit the application printing the input expression to stdout, use `Ctrl+S`.
 
 ## Key bindings
 
 | Component       | Key           | Description |
 |-----------------|---------------|-------------|
+| Any                  | `Ctrl+C`      | Exit application |
+| Any                  | `Ctrl+S`      | Exit application and print input expression to stdout |
 | Command Options      | `Tab`         | Move focus to positional arguments  |
 | Command Options      | `Shift+Tab`   | Move focus to file picker |
 | Command Options      | `Enter`       | Move focus to output |

@@ -13,7 +13,7 @@ import (
 	"golang.org/x/term"
 )
 
-const version = "0.3.0"
+const version = "0.3.1"
 
 func completionCommand() *cobra.Command {
 	return &cobra.Command{
