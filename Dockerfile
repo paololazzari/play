@@ -1,6 +1,7 @@
 FROM alpine:3.18.4 as build
 COPY --from=golang:1.21-alpine3.18 /usr/local/go/ /usr/local/go/
-RUN GOBIN=/usr/local/bin/ /usr/local/go/bin/go install github.com/paololazzari/play@latest
+ADD . .
+RUN GOBIN=/usr/local/bin/ /usr/local/go/bin/go install
 RUN apk add --no-cache wget && \
     wget -q https://github.com/stedolan/jq/releases/download/jq-1.7/jq-linux64 && \
     mv jq-linux64 /usr/local/bin/jq && \
