@@ -1,0 +1,52 @@
+name: goreleaser
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3.2.0
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "stable"
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v4.4.0
+        with:
+          version: latest
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build and release docker image
+        run: |
+          # Login dockerhub
+          pwd="${{ secrets.dockerhub }}"
+          docker login -u="plazzari" -p="${pwd}"
+
+          # Get version
+          VERSION=$(awk -F '[="]' '/^const version/ {print $3}' cmd/core.go)
+
+          # Build docker images
+          docker build . --tag "plazzari/play:${VERSION}"
+          docker tag "plazzari/play:${VERSION}" plazzari/play:latest
+
+          # Deploy docker images
+          docker push "plazzari/play:${VERSION}"
+          docker push plazzari/play:latest

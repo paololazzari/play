@@ -4,3 +4,4 @@ LICENSE.md
 README.md
 docs
 .github
+.goreleaser.yaml

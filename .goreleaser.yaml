@@ -1,0 +1,27 @@
+before:
+  hooks:
+    - go mod tidy
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+archives:
+  - format: zip
+    name_template: '{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}'
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '.*Docker.*'
+      - '.*README.*'
+      - '.*[Dd]ocumentation.*'
+      - '.*[Pp]ipelines.*'
+      - '.*gitignore.*'
+      - '.*dockerignore.*'
