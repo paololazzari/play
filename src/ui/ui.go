@@ -26,27 +26,29 @@ const (
 
 // User interface
 type UI struct {
-	App                   *tview.Application
-	Label                 string
-	EndOfOptionsSeparator bool
-	CommandText           *tview.TextView
-	OptionsInput          *tview.InputField
-	EndOptionsText        *tview.TextView
-	OpeningQuoteText      *tview.TextView
-	ArgumentsInput        *tview.InputField
-	ArgumentsInputWide    *tview.TextArea
-	ClosingQuoteText      *tview.TextView
-	EndArgumentsText      *tview.TextView
-	FileOptionsStdin      string
-	FileOptionsText       *tview.TextView
-	FileOptionsTreeNode   *tview.TreeNode
-	FileOptionsTreeView   *tview.TreeView
-	FileOptionsInputMap   map[string]bool
-	FileOptionsInputSlice []string
-	OutputView            *tview.TextView
-	FileView              *tview.TextView
-	Flex                  *tview.Flex
-	ActiveInput           **tview.InputField
+	App                    *tview.Application
+	Label                  string
+	EndOfOptionsSeparator  bool
+	CommandText            *tview.TextView
+	OptionsInput           *tview.InputField
+	EndOptionsText         *tview.TextView
+	OpeningQuoteText       *tview.TextView
+	ArgumentsInput         *tview.InputField
+	ArgumentsInputWide     *tview.TextArea
+	ArgumentsInputWideFlex *tview.Flex
+	ClosingQuoteText       *tview.TextView
+	EndArgumentsText       *tview.TextView
+	FileOptionsStdin       string
+	FileOptionsText        *tview.TextView
+	FileOptionsTreeNode    *tview.TreeNode
+	FileOptionsTreeView    *tview.TreeView
+	FileOptionsInputMap    map[string]bool
+	FileOptionsInputSlice  []string
+	OutputView             *tview.TextView
+	FileView               *tview.TextView
+	Flex                   *tview.Flex
+	ActiveInput            **tview.InputField
+	ActiveFlex             **tview.Flex
 }
 
 type nodeReference struct {
@@ -116,6 +118,11 @@ func argumentsInputWide() *tview.TextArea {
 	t.SetTitleColor(titleColor)
 	t.SetBorderColor(borderColor)
 	return t
+}
+
+// Returns the Flex used for wide positional arguments
+func argumentsInputWideFlex() *tview.Flex {
+	return tview.NewFlex()
 }
 
 // Returns the TextView for the closing single quote
@@ -201,29 +208,40 @@ func getFileOptionsText(a *[]string) string {
 // UI constructor
 func NewUI(program string, respectsEndOfOptions bool, stdin string) *UI {
 	ui := &UI{
-		App:                   tview.NewApplication(),
-		Label:                 program,
-		EndOfOptionsSeparator: respectsEndOfOptions,
-		CommandText:           commandText(program),
-		OptionsInput:          optionsInput(),
-		EndOptionsText:        endOptionsText(),
-		OpeningQuoteText:      openingQuoteText(),
-		ArgumentsInput:        argumentsInput(),
-		ArgumentsInputWide:    argumentsInputWide(),
-		ClosingQuoteText:      closingQuoteText(),
-		EndArgumentsText:      endArgumentsText(),
-		FileOptionsStdin:      stdin,
-		FileOptionsText:       fileOptionsText(),
-		FileOptionsTreeNode:   fileOptionsTreeNode(),
-		FileOptionsTreeView:   fileOptionsTreeView(),
-		FileOptionsInputMap:   make(map[string]bool),
-		FileOptionsInputSlice: []string{},
-		OutputView:            outputView(),
-		FileView:              fileView(),
-		Flex:                  flex(),
-		ActiveInput:           nil,
+		App:                    tview.NewApplication(),
+		Label:                  program,
+		EndOfOptionsSeparator:  respectsEndOfOptions,
+		CommandText:            commandText(program),
+		OptionsInput:           optionsInput(),
+		EndOptionsText:         endOptionsText(),
+		OpeningQuoteText:       openingQuoteText(),
+		ArgumentsInput:         argumentsInput(),
+		ArgumentsInputWide:     argumentsInputWide(),
+		ArgumentsInputWideFlex: argumentsInputWideFlex(),
+		ClosingQuoteText:       closingQuoteText(),
+		EndArgumentsText:       endArgumentsText(),
+		FileOptionsStdin:       stdin,
+		FileOptionsText:        fileOptionsText(),
+		FileOptionsTreeNode:    fileOptionsTreeNode(),
+		FileOptionsTreeView:    fileOptionsTreeView(),
+		FileOptionsInputMap:    make(map[string]bool),
+		FileOptionsInputSlice:  []string{},
+		OutputView:             outputView(),
+		FileView:               fileView(),
+		Flex:                   flex(),
+		ActiveInput:            nil,
+		ActiveFlex:             nil,
 	}
 	return ui
+}
+
+// Helper function for getting active input text
+func (ui *UI) getActiveInputText() string {
+	if ui.ActiveFlex == &ui.Flex {
+		return ui.ArgumentsInput.GetText()
+	} else {
+		return ui.ArgumentsInputWide.GetText()
+	}
 }
 
 // Helper function for evaluating expressions
@@ -239,7 +257,7 @@ func (ui *UI) evaluateExpression() func() {
 			sb.WriteString(" ")
 		}
 		sb.WriteString(ui.OpeningQuoteText.GetText(false))
-		sb.WriteString(ui.ArgumentsInput.GetText())
+		sb.WriteString(ui.getActiveInputText())
 		sb.WriteString(ui.ClosingQuoteText.GetText(false))
 		sb.WriteString(" ")
 		if !ui.EndOfOptionsSeparator {
@@ -362,8 +380,9 @@ func (ui *UI) configArgumentsInput() {
 				ui.ClosingQuoteText.SetText("'")
 			}
 		case tcell.KeyCtrlO:
-			ui.ArgumentsInputWide.SetText(ui.ArgumentsInput.GetText(), false)
-			ui.App.SetRoot(ui.ArgumentsInputWide, true).
+			ui.ArgumentsInputWide.SetText(ui.ArgumentsInput.GetText(), true)
+			ui.ActiveFlex = &ui.ArgumentsInputWideFlex
+			ui.App.SetRoot(ui.ArgumentsInputWideFlex, true).
 				SetFocus(ui.ArgumentsInputWide)
 		}
 		return event
@@ -377,20 +396,40 @@ func (ui *UI) configArgumentsInputWide() {
 
 	ui.ArgumentsInputWide.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		key := event.Key()
+		// on ctrl+enter return a new enter event
+		if event.Modifiers() == 2 && event.Rune() == 10 {
+			return tcell.NewEventKey(tcell.KeyEnter, 10, 0)
+		}
 		switch key {
 		case tcell.KeyCtrlO:
+			ui.ActiveFlex = &ui.Flex
 			ui.App.SetRoot(ui.Flex, true).
 				SetFocus(ui.ArgumentsInput)
 			ui.ArgumentsInput.SetText(ui.ArgumentsInputWide.GetText())
 		case tcell.KeyEsc:
+			ui.ActiveFlex = &ui.Flex
 			ui.App.SetRoot(ui.Flex, true).
 				SetFocus(ui.ArgumentsInput)
 			ui.ArgumentsInput.SetText(ui.ArgumentsInputWide.GetText())
+		case tcell.KeyEnter:
+			ui.App.SetFocus(ui.OutputView)
+			return nil
 		}
 		return event
 	})
 	ui.ArgumentsInputWide.SetBorder(true)
 	ui.ArgumentsInputWide.SetBorderColor(playBorderColor)
+}
+
+// Function for configuring ArgumentsInputWideFlex Flex
+func (ui *UI) configArgumentsInputWideFlex() {
+	ui.ArgumentsInputWideFlex.SetDirection(tview.FlexRow).
+		AddItem(ui.ArgumentsInputWide, 0, 1, false).
+		AddItem(ui.OutputView, 0, 1, false)
+	ui.ArgumentsInputWideFlex.SetBorder(true)
+	ui.ArgumentsInputWideFlex.SetTitle(" play ")
+	ui.ArgumentsInputWideFlex.SetTitleColor(playTitleColor)
+	ui.ArgumentsInputWideFlex.SetBorderColor(playBorderColor)
 }
 
 // Function for configuring FileOptionsText TextView
@@ -492,7 +531,13 @@ func (ui *UI) configFileOptionsTreeView() {
 func (ui *UI) configOutputView() {
 	ui.OutputView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyEsc {
-			ui.App.SetFocus(*ui.ActiveInput)
+			if ui.ActiveFlex == &ui.Flex {
+				ui.App.SetRoot(ui.Flex, true)
+				ui.App.SetFocus(*ui.ActiveInput)
+			} else {
+				ui.App.SetRoot(ui.ArgumentsInputWideFlex, true)
+				ui.App.SetFocus(ui.ArgumentsInputWide)
+			}
 		}
 		return event
 	})
@@ -563,6 +608,7 @@ func (ui *UI) InitUI() error {
 	ui.configOptionsInput()
 	ui.configArgumentsInput()
 	ui.configArgumentsInputWide()
+	ui.configArgumentsInputWideFlex()
 	ui.configFileOptionsInput()
 	ui.configFileOptionsTreeNode()
 	ui.configFileOptionsTreeView()
@@ -584,7 +630,7 @@ func (ui *UI) InitUI() error {
 			sb.WriteString(ui.OptionsInput.GetText())
 			sb.WriteString(endOptionsSeparator.GetText(false))
 			sb.WriteString(ui.OpeningQuoteText.GetText(false))
-			sb.WriteString(ui.ArgumentsInput.GetText())
+			sb.WriteString(ui.getActiveInputText())
 			sb.WriteString(ui.ClosingQuoteText.GetText(false))
 			sb.WriteString(endArgumentsSeparator.GetText(false))
 			sb.WriteString(strings.Join(ui.FileOptionsInputSlice, " "))
@@ -595,6 +641,7 @@ func (ui *UI) InitUI() error {
 		return event
 	})
 
+	ui.ActiveFlex = &ui.Flex
 	ui.App.SetRoot(ui.Flex, true).
 		SetFocus(ui.OptionsInput)
 

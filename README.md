@@ -55,7 +55,11 @@ To exit the application printing the input expression to stdout, use `Ctrl+S`.
 | Positional Arguments | `Tab`         | Move focus to file picker |
 | Positional Arguments | `Shift+Tab`   | Move focus to command options |
 | Positional Arguments | `Enter`       | Move focus to output |
-| Positional Arguments | `Ctrl+O`      | Open wide editor/Close wide editor |
+| Positional Arguments | `Ctrl+O`      | Open wide editor |
+| Wide Editor          | `Esc`         | Close wide editor |
+| Wide Editor          | `Ctrl+O`      | Close wide editor |
+| Wide Editor          | `Ctrl+Enter`  | Enter newline |
+| Wide Editor          | `Enter`       | Move focus to output |
 | File picker          | `Tab`         | Move focus to command options |
 | File picker          | `Shift+Tab`   | Move focus to positional arguments options |
 | File picker          | `Ctrl+O`      | Open selected file/Close selected file | 
