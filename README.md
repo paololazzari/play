@@ -1,4 +1,8 @@
+
 # play
+
+[![Go Report](https://img.shields.io/badge/go%20report-A%2B-brightgreen.svg)](https://goreportcard.com/report/github.com/paololazzari/play)
+![Pipeline status](https://github.com/paololazzari/play/actions/workflows/go.yml/badge.svg)
 
 play is a TUI playground for your favorite programs, such as grep, sed and awk.
 
