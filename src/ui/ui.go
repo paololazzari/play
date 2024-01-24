@@ -46,6 +46,7 @@ type UI struct {
 	FileOptionsInputSlice  []string
 	OutputView             *tview.TextView
 	FileView               *tview.TextView
+	ChildFlex              *tview.Flex
 	Flex                   *tview.Flex
 	ActiveInput            **tview.InputField
 	ActiveFlex             **tview.Flex
@@ -175,6 +176,11 @@ func fileView() *tview.TextView {
 }
 
 // Returns the Flex used for layout
+func childFlex() *tview.Flex {
+	return tview.NewFlex()
+}
+
+// Returns the Flex used for layout
 func flex() *tview.Flex {
 	return tview.NewFlex()
 }
@@ -228,6 +234,7 @@ func NewUI(program string, respectsEndOfOptions bool, stdin string) *UI {
 		FileOptionsInputSlice:  []string{},
 		OutputView:             outputView(),
 		FileView:               fileView(),
+		ChildFlex:              childFlex(),
 		Flex:                   flex(),
 		ActiveInput:            nil,
 		ActiveFlex:             nil,
@@ -275,6 +282,18 @@ func (ui *UI) evaluateExpression() func() {
 		}
 		out, _ := program.Run(sb.String())
 		ui.OutputView.SetText(out)
+	}
+}
+
+// Helper function to resize flex based on argument input size
+func (ui *UI) resizeChildFlexIfNeeded() {
+	argumentsInputLength := len(ui.ArgumentsInput.GetText())
+	if argumentsInputLength >= 40 {
+		ui.ChildFlex.ResizeItem(ui.ArgumentsInput, 0, 3)
+	} else if argumentsInputLength > 19 && argumentsInputLength < 40 {
+		ui.ChildFlex.ResizeItem(ui.ArgumentsInput, 0, 1)
+	} else if argumentsInputLength <= 19 {
+		ui.ChildFlex.ResizeItem(ui.ArgumentsInput, 22, 1)
 	}
 }
 
@@ -364,6 +383,13 @@ func (ui *UI) configArgumentsInput() {
 		switch key {
 		case tcell.KeyRune:
 			ui.OutputView.ScrollToBeginning()
+			ui.resizeChildFlexIfNeeded()
+		case tcell.KeyDelete:
+			ui.OutputView.ScrollToBeginning()
+			ui.resizeChildFlexIfNeeded()
+		case tcell.KeyBackspace2:
+			ui.OutputView.ScrollToBeginning()
+			ui.resizeChildFlexIfNeeded()
 		case tcell.KeyTab:
 			ui.App.SetFocus(ui.FileOptionsTreeView)
 		case tcell.KeyBacktab:
@@ -406,11 +432,13 @@ func (ui *UI) configArgumentsInputWide() {
 			ui.App.SetRoot(ui.Flex, true).
 				SetFocus(ui.ArgumentsInput)
 			ui.ArgumentsInput.SetText(ui.ArgumentsInputWide.GetText())
+			ui.resizeChildFlexIfNeeded()
 		case tcell.KeyEsc:
 			ui.ActiveFlex = &ui.Flex
 			ui.App.SetRoot(ui.Flex, true).
 				SetFocus(ui.ArgumentsInput)
 			ui.ArgumentsInput.SetText(ui.ArgumentsInputWide.GetText())
+			ui.resizeChildFlexIfNeeded()
 		case tcell.KeyEnter:
 			ui.App.SetFocus(ui.OutputView)
 			return nil
@@ -578,20 +606,26 @@ func (ui *UI) endArgumentsSeparator() (*tview.TextView, int, int, bool) {
 	}
 }
 
+// Function for configuring ChildFlex Flex
+func (ui *UI) configChildFlex() {
+	ui.ChildFlex.SetDirection(tview.FlexColumn).
+		AddItem(ui.CommandText, len(ui.Label)+4, 1, false).
+		AddItem(ui.OptionsInput, 17, 1, false).
+		AddItem(ui.endOptionsSeparator()).
+		AddItem(ui.OpeningQuoteText, 1, 1, false).
+		AddItem(ui.ArgumentsInput, 22, 1, false).
+		AddItem(ui.ClosingQuoteText, 1, 1, false).
+		AddItem(ui.endArgumentsSeparator()).
+		AddItem(ui.FileOptionsText, 0, 1, false).
+		AddItem(tview.NewBox(), 2, 1, false)
+}
+
 // Function for configuring Flex Flex
 func (ui *UI) configFlex() {
+
 	ui.Flex.AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
 		AddItem(tview.NewBox(), 2, 1, false).
-		AddItem(tview.NewFlex().SetDirection(tview.FlexColumn).
-			AddItem(ui.CommandText, len(ui.Label)+4, 1, false).
-			AddItem(ui.OptionsInput, 17, 1, false).
-			AddItem(ui.endOptionsSeparator()).
-			AddItem(ui.OpeningQuoteText, 1, 1, false).
-			AddItem(ui.ArgumentsInput, 22, 1, false).
-			AddItem(ui.ClosingQuoteText, 1, 1, false).
-			AddItem(ui.endArgumentsSeparator()).
-			AddItem(ui.FileOptionsText, 0, 1, false).
-			AddItem(tview.NewBox(), 2, 1, false), 3, 1, false).
+		AddItem(ui.ChildFlex, 3, 1, false).
 		AddItem(tview.NewFlex().SetDirection(tview.FlexColumn).
 			AddItem(ui.OutputView, 0, 10, false).
 			AddItem(ui.FileOptionsTreeView, 0, 2, false), 0, 1, false), 0, 1, false)
@@ -599,7 +633,6 @@ func (ui *UI) configFlex() {
 	ui.Flex.SetTitle(" play ")
 	ui.Flex.SetTitleColor(playTitleColor)
 	ui.Flex.SetBorderColor(playBorderColor)
-
 }
 
 // Initialize UI
@@ -614,6 +647,7 @@ func (ui *UI) InitUI() error {
 	ui.configFileOptionsTreeView()
 	ui.configOutputView()
 	ui.configFileView()
+	ui.configChildFlex()
 	ui.configFlex()
 
 	// on Ctrl+S shut down the application and print the expression to stdout
