@@ -281,7 +281,7 @@ func (ui *UI) evaluateExpression() func() {
 			}
 		}
 		out, _ := program.Run(sb.String())
-		ui.OutputView.SetText(out)
+		ui.OutputView.SetText(tview.TranslateANSI(out))
 	}
 }
 
