@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"os/exec"
 	"runtime"
-
-	"github.com/rivo/tview"
 )
 
 // Program being used
@@ -37,16 +35,16 @@ func shellout(command string, silent bool) (string, string, error) {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	err := cmd.Run()
-	return tview.TranslateANSI(stdout.String()), tview.TranslateANSI(stderr.String()), err
+	return stdout.String(), stderr.String(), err
 }
 
 func Run(command string) (res string, err error) {
 
 	stdout, stderr, err := shellout(command, true)
 	if err != nil {
-		stderr = tview.TranslateANSI(stderr) + fmt.Sprint(tview.TranslateANSI(err.Error()))
+		stderr = stderr + fmt.Sprint(err)
 		return stderr, nil
 	}
 
-	return tview.TranslateANSI(stdout), nil
+	return stdout, nil
 }
