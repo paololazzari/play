@@ -44,7 +44,7 @@ func Run(command string) (res string, err error) {
 
 	stdout, stderr, err := shellout(command, true)
 	if err != nil {
-		stderr = stderr + fmt.Sprint(err)
+		stderr = stderr + fmt.Sprint(tview.TranslateANSI(err.Error()))
 		return stderr, nil
 	}
 
