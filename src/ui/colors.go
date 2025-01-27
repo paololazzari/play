@@ -10,10 +10,6 @@ import (
 	"github.com/alecthomas/chroma/styles"
 )
 
-const (
-	style = "monokai"
-)
-
 var (
 	buff            strings.Builder
 	backGroundColor string
@@ -38,7 +34,7 @@ var (
 	}))
 )
 
-func Colorize(partialFileContents string, fileContents string, filename string) {
+func Colorize(partialFileContents string, fileContents string, filename string, themeName string) {
 	buff.Reset()
 
 	// attempt to the language from its filename.
@@ -55,7 +51,7 @@ func Colorize(partialFileContents string, fileContents string, filename string) 
 			}
 		}
 	}
-	s := styles.Get(style)
+	s := styles.Get(themeName)
 	c := Color
 	it, err := l.Tokenise(nil, fileContents)
 	if err != nil {

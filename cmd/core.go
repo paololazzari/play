@@ -13,7 +13,7 @@ import (
 	"golang.org/x/term"
 )
 
-const version = "0.3.4"
+const version = "0.3.5"
 
 func completionCommand() *cobra.Command {
 	return &cobra.Command{
@@ -29,7 +29,15 @@ var (
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			if cmd.Use != "version" {
 				validateProgramExists(cmd.Use)
+
+				theme, _ := cmd.Flags().GetString("theme")
+				validateThemeSupport(theme)
+				if cmd.Annotations == nil {
+					cmd.Annotations = make(map[string]string)
+				}
+				cmd.Annotations["theme"] = theme
 			}
+
 			validateArgs(args)
 			return nil
 		},
@@ -48,7 +56,7 @@ var (
 		Use:   "grep",
 		Short: `Play with grep`,
 		Run: func(cmd *cobra.Command, args []string) {
-			run(program.NewProgram("grep", true))
+			run(program.NewProgram("grep", true), cmd.Annotations["theme"])
 		},
 	}
 
@@ -56,7 +64,7 @@ var (
 		Use:   "sed",
 		Short: `Play with sed`,
 		Run: func(cmd *cobra.Command, args []string) {
-			run(program.NewProgram("sed", true))
+			run(program.NewProgram("sed", true), cmd.Annotations["theme"])
 		},
 	}
 
@@ -64,7 +72,7 @@ var (
 		Use:   "awk",
 		Short: `Play with awk`,
 		Run: func(cmd *cobra.Command, args []string) {
-			run(program.NewProgram("awk", true))
+			run(program.NewProgram("awk", true), cmd.Annotations["theme"])
 		},
 	}
 
@@ -72,7 +80,7 @@ var (
 		Use:   "jq",
 		Short: `Play with jq`,
 		Run: func(cmd *cobra.Command, args []string) {
-			run(program.NewProgram("jq", false))
+			run(program.NewProgram("jq", false), cmd.Annotations["theme"])
 		},
 	}
 
@@ -80,7 +88,7 @@ var (
 		Use:   "yq",
 		Short: `Play with yq`,
 		Run: func(cmd *cobra.Command, args []string) {
-			run(program.NewProgram("yq", false))
+			run(program.NewProgram("yq", false), cmd.Annotations["theme"])
 		},
 	}
 )
@@ -96,6 +104,19 @@ func validateArgs(args []string) {
 	}
 }
 
+func validateThemeSupport(theme string) {
+	var validThemes []string
+
+	_, exists := ui.Themes[theme]
+	if !exists {
+		for theme := range ui.Themes {
+			validThemes = append(validThemes, theme)
+		}
+		fmt.Printf("Error: Invalid theme '%s'. Valid themes are: %v\n", theme, validThemes)
+		os.Exit(1)
+	}
+}
+
 func validateProgramExists(program string) {
 	_, err := exec.LookPath(program)
 	if err != nil {
@@ -103,7 +124,7 @@ func validateProgramExists(program string) {
 	}
 }
 
-func run(program program.Program) error {
+func run(program program.Program, theme string) error {
 
 	var userInterface *ui.UI
 	input := ""
@@ -124,7 +145,7 @@ func run(program program.Program) error {
 		}
 	}
 
-	userInterface = ui.NewUI(program.Name, program.RespectsEndOfOptions, input)
+	userInterface = ui.NewUI(program.Name, program.RespectsEndOfOptions, input, theme)
 	userInterface.InitUI()
 	userInterface.Run()
 	return nil
@@ -140,6 +161,11 @@ func init() {
 	rootCmd.AddCommand(jqCmd)
 	rootCmd.AddCommand(yqCmd)
 	rootCmd.AddCommand(completion) // https://github.com/spf13/cobra/issues/1507
+	rootCmd.PersistentFlags().String("theme", "monokai", "theme")
+	versionCmd.SetHelpFunc(func(command *cobra.Command, strings []string) {
+		command.Flags().MarkHidden("theme")
+		command.Parent().HelpFunc()(command, strings)
+	})
 }
 
 func Execute() {

@@ -16,14 +16,6 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-// Colors for UI
-const (
-	playTitleColor  = tcell.ColorSteelBlue
-	playBorderColor = tcell.ColorSteelBlue
-	titleColor      = tcell.ColorCadetBlue
-	borderColor     = tcell.ColorCadetBlue
-)
-
 // User interface
 type UI struct {
 	App                    *tview.Application
@@ -50,6 +42,8 @@ type UI struct {
 	Flex                   *tview.Flex
 	ActiveInput            **tview.InputField
 	ActiveFlex             **tview.Flex
+	ThemeName              string
+	Theme                  Theme
 }
 
 type nodeReference struct {
@@ -70,30 +64,25 @@ func getNodePartialFileContents(node *tview.TreeNode) string {
 // Returns the TextView with the command itself
 func commandText(label string) *tview.TextView {
 	return tview.NewTextView().
-		SetText(" > " + label).
-		SetTextColor(titleColor)
+		SetText(" > " + label)
 }
 
 // Returns the InputField for the command options
 func optionsInput() *tview.InputField {
 	return tview.NewInputField().
 		SetLabel("").
-		SetFieldBackgroundColor(tcell.ColorDefault).
 		SetPlaceholder("<command options>").
-		SetPlaceholderTextColor(tcell.ColorDefault).
 		SetPlaceholderStyle(tcell.StyleDefault)
 }
 
 // Returns the TextView for the options separator
 func endOptionsText() *tview.TextView {
-	return tview.NewTextView().
-		SetTextColor(titleColor)
+	return tview.NewTextView()
 }
 
 // Returns the TextView for the arguments separator
 func endArgumentsText() *tview.TextView {
-	return tview.NewTextView().
-		SetTextColor(titleColor)
+	return tview.NewTextView()
 }
 
 // Returns the TextView with the opening single quote
@@ -106,8 +95,6 @@ func openingQuoteText() *tview.TextView {
 func argumentsInput() *tview.InputField {
 	return tview.NewInputField().
 		SetPlaceholder("<positional arguments>").
-		SetFieldBackgroundColor(tcell.ColorDefault).
-		SetPlaceholderTextColor(tcell.ColorDefault).
 		SetPlaceholderStyle(tcell.StyleDefault)
 }
 
@@ -116,8 +103,6 @@ func argumentsInputWide() *tview.TextArea {
 	t := tview.NewTextArea()
 	t.SetBorder(true)
 	t.SetTitle(" Positional arguments ")
-	t.SetTitleColor(titleColor)
-	t.SetBorderColor(borderColor)
 	return t
 }
 
@@ -148,8 +133,6 @@ func fileOptionsTreeView() *tview.TreeView {
 	t := tview.NewTreeView()
 	t.SetBorder(true)
 	t.SetTitle(" File picker ")
-	t.SetTitleColor(titleColor)
-	t.SetBorderColor(borderColor)
 	return t
 }
 
@@ -159,8 +142,6 @@ func outputView() *tview.TextView {
 		SetDynamicColors(true)
 	t.SetBorder(true)
 	t.SetTitle(" Output ")
-	t.SetTitleColor(titleColor)
-	t.SetBorderColor(borderColor)
 	return t
 }
 
@@ -170,8 +151,6 @@ func fileView() *tview.TextView {
 		SetDynamicColors(true)
 	t.SetBorder(true)
 	t.SetTitle(" File view ")
-	t.SetTitleColor(titleColor)
-	t.SetBorderColor(borderColor)
 	return t
 }
 
@@ -212,9 +191,11 @@ func getFileOptionsText(a *[]string) string {
 }
 
 // UI constructor
-func NewUI(program string, respectsEndOfOptions bool, stdin string) *UI {
+func NewUI(program string, respectsEndOfOptions bool, stdin string, theme string) *UI {
 	ui := &UI{
 		App:                    tview.NewApplication(),
+		ThemeName:              theme,
+		Theme:                  Themes[theme],
 		Label:                  program,
 		EndOfOptionsSeparator:  respectsEndOfOptions,
 		CommandText:            commandText(program),
@@ -336,7 +317,7 @@ func add(target *tview.TreeNode, path string, ui *UI) {
 		node.SetReference(nodeRef)
 
 		if file.IsDir() {
-			node.SetColor(tcell.ColorGreen)
+			node.SetColor(ui.Theme.TextColor)
 			target.AddChild(node)
 		} else {
 			// only add text files https://stackoverflow.com/a/75940070/3390419
@@ -353,6 +334,20 @@ func add(target *tview.TreeNode, path string, ui *UI) {
 			}
 		}
 	}
+}
+
+// Function for configuring CommandText TextView
+func (ui *UI) configCommandText() {
+	ui.CommandText.SetBackgroundColor(ui.Theme.BackGroundColor)
+	ui.CommandText.SetTextColor(ui.Theme.KeywordColor)
+}
+
+// Function for configuring OpeningQuoteText and ClosingQuoteText TextViews
+func (ui *UI) configQuotes() {
+	ui.OpeningQuoteText.SetBackgroundColor(ui.Theme.BackGroundColor)
+	ui.OpeningQuoteText.SetTextColor(ui.Theme.KeywordColor)
+	ui.ClosingQuoteText.SetBackgroundColor(ui.Theme.BackGroundColor)
+	ui.ClosingQuoteText.SetTextColor(ui.Theme.KeywordColor)
 }
 
 // Function for configuring OptionsInput InputField
@@ -373,6 +368,11 @@ func (ui *UI) configOptionsInput() {
 		}
 		return event
 	})
+
+	ui.OptionsInput.SetFieldTextColor(ui.Theme.TextColor)
+	ui.OptionsInput.SetFieldBackgroundColor(ui.Theme.BackGroundColor)
+	ui.OptionsInput.SetBackgroundColor(ui.Theme.BackGroundColor)
+	ui.OptionsInput.SetPlaceholderTextColor(ui.Theme.TextColor)
 }
 
 // Function for configuring ArgumentsInput InputField
@@ -414,6 +414,10 @@ func (ui *UI) configArgumentsInput() {
 		return event
 	})
 
+	ui.ArgumentsInput.SetFieldTextColor(ui.Theme.TextColor)
+	ui.ArgumentsInput.SetFieldBackgroundColor(ui.Theme.BackGroundColor)
+	ui.ArgumentsInput.SetBackgroundColor(ui.Theme.BackGroundColor)
+	ui.ArgumentsInput.SetPlaceholderTextColor(ui.Theme.TextColor)
 }
 
 // Function for configuring ArgumentsInputWide InputField
@@ -446,18 +450,24 @@ func (ui *UI) configArgumentsInputWide() {
 		return event
 	})
 	ui.ArgumentsInputWide.SetBorder(true)
-	ui.ArgumentsInputWide.SetBorderColor(playBorderColor)
+
+	ui.ArgumentsInputWide.SetBackgroundColor(ui.Theme.BackGroundColor)
+	ui.ArgumentsInputWide.SetTitleColor(ui.Theme.KeywordColor)
+	ui.ArgumentsInputWide.SetBorderColor(ui.Theme.BorderColor)
+	ui.ArgumentsInputWide.SetFormAttributes(0, ui.Theme.TextColor, ui.Theme.BackGroundColor, ui.Theme.TextColor, ui.Theme.BackGroundColor)
 }
 
 // Function for configuring ArgumentsInputWideFlex Flex
 func (ui *UI) configArgumentsInputWideFlex() {
+
 	ui.ArgumentsInputWideFlex.SetDirection(tview.FlexRow).
 		AddItem(ui.ArgumentsInputWide, 0, 1, false).
 		AddItem(ui.OutputView, 0, 1, false)
 	ui.ArgumentsInputWideFlex.SetBorder(true)
 	ui.ArgumentsInputWideFlex.SetTitle(" play ")
-	ui.ArgumentsInputWideFlex.SetTitleColor(playTitleColor)
-	ui.ArgumentsInputWideFlex.SetBorderColor(playBorderColor)
+	ui.ArgumentsInputWideFlex.SetBackgroundColor(ui.Theme.BackGroundColor)
+	ui.ArgumentsInputWideFlex.SetTitleColor(ui.Theme.TitleColor)
+	ui.ArgumentsInputWideFlex.SetBorderColor(ui.Theme.BorderColor)
 }
 
 // Function for configuring FileOptionsText TextView
@@ -483,6 +493,9 @@ func (ui *UI) configFileOptionsInput() {
 		}
 		return event
 	})
+	ui.FileOptionsText.SetBackgroundColor(ui.Theme.BackGroundColor)
+	ui.FileOptionsText.SetTextColor(ui.Theme.TextColor)
+
 }
 
 // Function for configuring FileOptionsTreeNode TreeNode
@@ -506,10 +519,10 @@ func (ui *UI) configFileOptionsTreeView() {
 			return
 		}
 		if stat, _ := os.Stat(nodePath); !stat.IsDir() {
-			if node.GetColor() == tcell.ColorRed {
+			if node.GetColor() == ui.Theme.KeywordColor {
 				node.SetColor(defaultColor)
 			} else {
-				node.SetColor(tcell.ColorRed)
+				node.SetColor(ui.Theme.KeywordColor)
 			}
 			// when a file is selected, update the sorted, unique list of files
 			updateFileOptionsInput(ui.FileOptionsInputMap, &ui.FileOptionsInputSlice, nodePath)
@@ -543,7 +556,7 @@ func (ui *UI) configFileOptionsTreeView() {
 			file, err := os.ReadFile(filename)
 			if err == nil {
 				fileContents := string(file)
-				Colorize(getNodePartialFileContents(ui.FileOptionsTreeView.GetCurrentNode()), fileContents, filename)
+				Colorize(getNodePartialFileContents(ui.FileOptionsTreeView.GetCurrentNode()), fileContents, filename, ui.ThemeName)
 				ui.FileView.SetText(buff.String())
 				ui.FileView.SetBackgroundColor(tcell.GetColor(backGroundColor))
 				ui.App.SetRoot(ui.FileView, true).
@@ -553,6 +566,10 @@ func (ui *UI) configFileOptionsTreeView() {
 
 		return event
 	})
+
+	ui.FileOptionsTreeView.SetTitleColor(ui.Theme.KeywordColor)
+	ui.FileOptionsTreeView.SetBackgroundColor(ui.Theme.BackGroundColor)
+	ui.FileOptionsTreeView.SetBorderColor(ui.Theme.BorderColor)
 }
 
 // Function for configuring OutputView TextView
@@ -569,6 +586,11 @@ func (ui *UI) configOutputView() {
 		}
 		return event
 	})
+
+	ui.OutputView.SetBackgroundColor(ui.Theme.BackGroundColor)
+	ui.OutputView.SetTitleColor(ui.Theme.KeywordColor)
+	ui.OutputView.SetBorderColor(ui.Theme.BorderColor)
+	ui.OutputView.SetTextColor(ui.Theme.BorderColor)
 }
 
 // Function for configuring FileView TextView
@@ -586,10 +608,16 @@ func (ui *UI) configFileView() {
 
 		return event
 	})
+
+	ui.FileView.SetTitleColor(ui.Theme.KeywordColor)
 }
 
 // Helper function
 func (ui *UI) endOptionsSeparator() (*tview.TextView, int, int, bool) {
+
+	ui.EndOptionsText.SetBackgroundColor(ui.Theme.BackGroundColor)
+	ui.EndOptionsText.SetTextColor(ui.Theme.KeywordColor)
+
 	if ui.EndOfOptionsSeparator {
 		return ui.EndOptionsText.SetText(" -- "), 4, 1, false
 	} else {
@@ -599,6 +627,10 @@ func (ui *UI) endOptionsSeparator() (*tview.TextView, int, int, bool) {
 
 // Helper function
 func (ui *UI) endArgumentsSeparator() (*tview.TextView, int, int, bool) {
+
+	ui.EndArgumentsText.SetBackgroundColor(ui.Theme.BackGroundColor)
+	ui.EndArgumentsText.SetTextColor(ui.Theme.KeywordColor)
+
 	if ui.EndOfOptionsSeparator {
 		return ui.EndArgumentsText.SetText(" "), 1, 1, false
 	} else {
@@ -617,27 +649,32 @@ func (ui *UI) configChildFlex() {
 		AddItem(ui.ClosingQuoteText, 1, 1, false).
 		AddItem(ui.endArgumentsSeparator()).
 		AddItem(ui.FileOptionsText, 0, 1, false).
-		AddItem(tview.NewBox(), 2, 1, false)
+		AddItem(tview.NewBox().SetBackgroundColor(ui.Theme.BackGroundColor), 2, 1, false)
+	ui.ChildFlex.SetBackgroundColor(ui.Theme.BackGroundColor)
 }
 
 // Function for configuring Flex Flex
 func (ui *UI) configFlex() {
 
 	ui.Flex.AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
-		AddItem(tview.NewBox(), 2, 1, false).
+		AddItem(tview.NewBox().SetBackgroundColor(ui.Theme.BackGroundColor), 2, 1, false).
 		AddItem(ui.ChildFlex, 3, 1, false).
 		AddItem(tview.NewFlex().SetDirection(tview.FlexColumn).
 			AddItem(ui.OutputView, 0, 10, false).
 			AddItem(ui.FileOptionsTreeView, 0, 2, false), 0, 1, false), 0, 1, false)
 	ui.Flex.SetBorder(true)
 	ui.Flex.SetTitle(" play ")
-	ui.Flex.SetTitleColor(playTitleColor)
-	ui.Flex.SetBorderColor(playBorderColor)
+	ui.Flex.SetBackgroundColor(ui.Theme.BackGroundColor)
+	ui.Flex.SetTitleColor(ui.Theme.TitleColor)
+	ui.Flex.SetBorderColor(ui.Theme.BorderColor)
+
 }
 
 // Initialize UI
 func (ui *UI) InitUI() error {
 
+	ui.configCommandText()
+	ui.configQuotes()
 	ui.configOptionsInput()
 	ui.configArgumentsInput()
 	ui.configArgumentsInputWide()
