@@ -16,7 +16,7 @@ play is a TUI playground for your favorite programs, such as grep, sed and awk.
 
 # Demo
 
-![](docs/demo.gif)
+![](docs/newdemo.gif)
 
 It uses the excellent [tview](https://github.com/rivo/tview) library for the UI.
 
