@@ -40,8 +40,10 @@ The input is evaluated immediately as you type without any validation.
 If you want to use `play` in read-only mode, thus avoding any file changes (such as those that would result if, for instance, `sed -i` was used), then you can use a docker container:
 
 ```bash
-$ docker run --rm -it -v "$(pwd)":/play:ro plazzari/play:latest <program>
+$ docker run -e "TERM=xterm-256color" --rm -it -v "$(pwd)":/play:ro plazzari/play:latest <program>
 ```
+
+The `TERM` environment variable is needed to get color themes working properly.
 
 To exit the application, use `Ctrl+C`.
 
