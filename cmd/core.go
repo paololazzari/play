@@ -13,7 +13,7 @@ import (
 	"golang.org/x/term"
 )
 
-const version = "0.3.6"
+const version = "0.4.0"
 
 func completionCommand() *cobra.Command {
 	return &cobra.Command{
@@ -127,6 +127,7 @@ func validateProgramExists(program string) {
 func run(program program.Program, theme string) error {
 
 	var userInterface *ui.UI
+	var stdinTmpFile string
 	input := ""
 
 	// check whether file descriptor is terminal
@@ -140,12 +141,25 @@ func run(program program.Program, theme string) error {
 			scanner := bufio.NewScanner(os.Stdin)
 			for scanner.Scan() {
 				stdin = append(stdin, scanner.Bytes()...)
+				stdin = append(stdin, '\n')
 			}
 			input = string(stdin)
+
+			tmpFile, err := os.CreateTemp("", "play")
+			if err != nil {
+				exitWithError(err)
+			}
+			defer tmpFile.Close()
+
+			_, err = tmpFile.Write([]byte(input))
+			if err != nil {
+				exitWithError(err)
+			}
+			stdinTmpFile = tmpFile.Name()
 		}
 	}
 
-	userInterface = ui.NewUI(program.Name, program.RespectsEndOfOptions, input, theme)
+	userInterface = ui.NewUI(program.Name, program.RespectsEndOfOptions, stdinTmpFile, theme)
 	userInterface.InitUI()
 	userInterface.Run()
 	return nil

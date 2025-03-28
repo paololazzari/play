@@ -30,7 +30,8 @@ type UI struct {
 	ArgumentsInputWideFlex *tview.Flex
 	ClosingQuoteText       *tview.TextView
 	EndArgumentsText       *tview.TextView
-	FileOptionsStdin       string
+	hideFileElements       bool
+	stdinTmpFile           string
 	FileOptionsText        *tview.TextView
 	FileOptionsTreeNode    *tview.TreeNode
 	FileOptionsTreeView    *tview.TreeView
@@ -191,7 +192,7 @@ func getFileOptionsText(a *[]string) string {
 }
 
 // UI constructor
-func NewUI(program string, respectsEndOfOptions bool, stdin string, theme string) *UI {
+func NewUI(program string, respectsEndOfOptions bool, stdinTmpFile string, theme string) *UI {
 	ui := &UI{
 		App:                    tview.NewApplication(),
 		ThemeName:              theme,
@@ -207,7 +208,8 @@ func NewUI(program string, respectsEndOfOptions bool, stdin string, theme string
 		ArgumentsInputWideFlex: argumentsInputWideFlex(),
 		ClosingQuoteText:       closingQuoteText(),
 		EndArgumentsText:       endArgumentsText(),
-		FileOptionsStdin:       stdin,
+		stdinTmpFile:           stdinTmpFile,
+		hideFileElements:       false,
 		FileOptionsText:        fileOptionsText(),
 		FileOptionsTreeNode:    fileOptionsTreeNode(),
 		FileOptionsTreeView:    fileOptionsTreeView(),
@@ -252,11 +254,8 @@ func (ui *UI) evaluateExpression() func() {
 			sb.WriteString(" -- ")
 		}
 		if t := ui.FileOptionsText.GetText(false); t != "<input files>" {
-			if len(ui.FileOptionsStdin) > 0 && len(ui.FileOptionsInputSlice) == 0 {
-				sb.WriteString("<<<")
-				sb.WriteString("'")
-				sb.WriteString(ui.FileOptionsStdin)
-				sb.WriteString("'")
+			if len(ui.stdinTmpFile) > 0 && len(ui.FileOptionsInputSlice) == 0 {
+				sb.WriteString(ui.stdinTmpFile)
 			} else {
 				sb.WriteString(t)
 			}
@@ -353,21 +352,40 @@ func (ui *UI) configQuotes() {
 // Function for configuring OptionsInput InputField
 func (ui *UI) configOptionsInput() {
 	ui.OptionsInput.SetChangedFunc(ui.changedInputField())
-	ui.OptionsInput.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		key := event.Key()
-		switch key {
-		case tcell.KeyTab:
-			ui.App.SetFocus(ui.ArgumentsInput)
-		case tcell.KeyBacktab:
-			ui.App.SetFocus(ui.FileOptionsTreeView)
-		case tcell.KeyEnter:
-			ui.ActiveInput = &ui.OptionsInput
-			ui.App.SetFocus(ui.OutputView)
-		case tcell.KeyRune:
-			ui.OutputView.ScrollToBeginning()
-		}
-		return event
-	})
+
+	if ui.hideFileElements {
+		ui.OptionsInput.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+			key := event.Key()
+			switch key {
+			case tcell.KeyTab:
+				ui.App.SetFocus(ui.ArgumentsInput)
+			case tcell.KeyBacktab:
+				ui.App.SetFocus(ui.ArgumentsInput)
+			case tcell.KeyEnter:
+				ui.ActiveInput = &ui.OptionsInput
+				ui.App.SetFocus(ui.OutputView)
+			case tcell.KeyRune:
+				ui.OutputView.ScrollToBeginning()
+			}
+			return event
+		})
+	} else {
+		ui.OptionsInput.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+			key := event.Key()
+			switch key {
+			case tcell.KeyTab:
+				ui.App.SetFocus(ui.ArgumentsInput)
+			case tcell.KeyBacktab:
+				ui.App.SetFocus(ui.FileOptionsTreeView)
+			case tcell.KeyEnter:
+				ui.ActiveInput = &ui.OptionsInput
+				ui.App.SetFocus(ui.OutputView)
+			case tcell.KeyRune:
+				ui.OutputView.ScrollToBeginning()
+			}
+			return event
+		})
+	}
 
 	ui.OptionsInput.SetFieldTextColor(ui.Theme.TextColor)
 	ui.OptionsInput.SetFieldBackgroundColor(ui.Theme.BackGroundColor)
@@ -378,41 +396,80 @@ func (ui *UI) configOptionsInput() {
 // Function for configuring ArgumentsInput InputField
 func (ui *UI) configArgumentsInput() {
 	ui.ArgumentsInput.SetChangedFunc(ui.changedInputField())
-	ui.ArgumentsInput.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		key := event.Key()
-		switch key {
-		case tcell.KeyRune:
-			ui.OutputView.ScrollToBeginning()
-			ui.resizeChildFlexIfNeeded()
-		case tcell.KeyDelete:
-			ui.OutputView.ScrollToBeginning()
-			ui.resizeChildFlexIfNeeded()
-		case tcell.KeyBackspace2:
-			ui.OutputView.ScrollToBeginning()
-			ui.resizeChildFlexIfNeeded()
-		case tcell.KeyTab:
-			ui.App.SetFocus(ui.FileOptionsTreeView)
-		case tcell.KeyBacktab:
-			ui.App.SetFocus(ui.OptionsInput)
-		case tcell.KeyEnter:
-			ui.ActiveInput = &ui.ArgumentsInput
-			ui.App.SetFocus(ui.OutputView)
-		case tcell.KeyCtrlSpace:
-			if ui.OpeningQuoteText.GetText(false) == "'" {
-				ui.OpeningQuoteText.SetText("\"")
-				ui.ClosingQuoteText.SetText("\"")
-			} else {
-				ui.OpeningQuoteText.SetText("'")
-				ui.ClosingQuoteText.SetText("'")
+
+	if ui.hideFileElements {
+		ui.ArgumentsInput.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+			key := event.Key()
+			switch key {
+			case tcell.KeyRune:
+				ui.OutputView.ScrollToBeginning()
+				ui.resizeChildFlexIfNeeded()
+			case tcell.KeyDelete:
+				ui.OutputView.ScrollToBeginning()
+				ui.resizeChildFlexIfNeeded()
+			case tcell.KeyBackspace2:
+				ui.OutputView.ScrollToBeginning()
+				ui.resizeChildFlexIfNeeded()
+			case tcell.KeyTab:
+				ui.App.SetFocus(ui.OptionsInput)
+			case tcell.KeyBacktab:
+				ui.App.SetFocus(ui.OptionsInput)
+			case tcell.KeyEnter:
+				ui.ActiveInput = &ui.ArgumentsInput
+				ui.App.SetFocus(ui.OutputView)
+			case tcell.KeyCtrlSpace:
+				if ui.OpeningQuoteText.GetText(false) == "'" {
+					ui.OpeningQuoteText.SetText("\"")
+					ui.ClosingQuoteText.SetText("\"")
+				} else {
+					ui.OpeningQuoteText.SetText("'")
+					ui.ClosingQuoteText.SetText("'")
+				}
+			case tcell.KeyCtrlO:
+				ui.ArgumentsInputWide.SetText(ui.ArgumentsInput.GetText(), true)
+				ui.ActiveFlex = &ui.ArgumentsInputWideFlex
+				ui.App.SetRoot(ui.ArgumentsInputWideFlex, true).
+					SetFocus(ui.ArgumentsInputWide)
 			}
-		case tcell.KeyCtrlO:
-			ui.ArgumentsInputWide.SetText(ui.ArgumentsInput.GetText(), true)
-			ui.ActiveFlex = &ui.ArgumentsInputWideFlex
-			ui.App.SetRoot(ui.ArgumentsInputWideFlex, true).
-				SetFocus(ui.ArgumentsInputWide)
-		}
-		return event
-	})
+			return event
+		})
+	} else {
+		ui.ArgumentsInput.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+			key := event.Key()
+			switch key {
+			case tcell.KeyRune:
+				ui.OutputView.ScrollToBeginning()
+				ui.resizeChildFlexIfNeeded()
+			case tcell.KeyDelete:
+				ui.OutputView.ScrollToBeginning()
+				ui.resizeChildFlexIfNeeded()
+			case tcell.KeyBackspace2:
+				ui.OutputView.ScrollToBeginning()
+				ui.resizeChildFlexIfNeeded()
+			case tcell.KeyTab:
+				ui.App.SetFocus(ui.FileOptionsTreeView)
+			case tcell.KeyBacktab:
+				ui.App.SetFocus(ui.OptionsInput)
+			case tcell.KeyEnter:
+				ui.ActiveInput = &ui.ArgumentsInput
+				ui.App.SetFocus(ui.OutputView)
+			case tcell.KeyCtrlSpace:
+				if ui.OpeningQuoteText.GetText(false) == "'" {
+					ui.OpeningQuoteText.SetText("\"")
+					ui.ClosingQuoteText.SetText("\"")
+				} else {
+					ui.OpeningQuoteText.SetText("'")
+					ui.ClosingQuoteText.SetText("'")
+				}
+			case tcell.KeyCtrlO:
+				ui.ArgumentsInputWide.SetText(ui.ArgumentsInput.GetText(), true)
+				ui.ActiveFlex = &ui.ArgumentsInputWideFlex
+				ui.App.SetRoot(ui.ArgumentsInputWideFlex, true).
+					SetFocus(ui.ArgumentsInputWide)
+			}
+			return event
+		})
+	}
 
 	ui.ArgumentsInput.SetFieldTextColor(ui.Theme.TextColor)
 	ui.ArgumentsInput.SetFieldBackgroundColor(ui.Theme.BackGroundColor)
@@ -473,10 +530,6 @@ func (ui *UI) configArgumentsInputWideFlex() {
 // Function for configuring FileOptionsText TextView
 func (ui *UI) configFileOptionsInput() {
 	ui.FileOptionsText.SetChangedFunc(ui.changedText())
-
-	if len(ui.FileOptionsStdin) > 0 {
-		ui.FileOptionsText.SetText(ui.FileOptionsStdin)
-	}
 	ui.FileOptionsText.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		key := event.Key()
 		switch key {
@@ -640,38 +693,63 @@ func (ui *UI) endArgumentsSeparator() (*tview.TextView, int, int, bool) {
 
 // Function for configuring ChildFlex Flex
 func (ui *UI) configChildFlex() {
-	ui.ChildFlex.SetDirection(tview.FlexColumn).
-		AddItem(ui.CommandText, len(ui.Label)+4, 1, false).
-		AddItem(ui.OptionsInput, 17, 1, false).
-		AddItem(ui.endOptionsSeparator()).
-		AddItem(ui.OpeningQuoteText, 1, 1, false).
-		AddItem(ui.ArgumentsInput, 22, 1, false).
-		AddItem(ui.ClosingQuoteText, 1, 1, false).
-		AddItem(ui.endArgumentsSeparator()).
-		AddItem(ui.FileOptionsText, 0, 1, false).
-		AddItem(tview.NewBox().SetBackgroundColor(ui.Theme.BackGroundColor), 2, 1, false)
+	if ui.hideFileElements {
+		ui.ChildFlex.SetDirection(tview.FlexColumn).
+			AddItem(ui.CommandText, len(ui.Label)+4, 1, false).
+			AddItem(ui.OptionsInput, 17, 1, false).
+			AddItem(ui.endOptionsSeparator()).
+			AddItem(ui.OpeningQuoteText, 1, 1, false).
+			AddItem(ui.ArgumentsInput, 22, 1, false).
+			AddItem(ui.ClosingQuoteText, 1, 1, false).
+			AddItem(tview.NewBox().SetBackgroundColor(ui.Theme.BackGroundColor), 0, 1, false)
+	} else {
+		ui.ChildFlex.SetDirection(tview.FlexColumn).
+			AddItem(ui.CommandText, len(ui.Label)+4, 1, false).
+			AddItem(ui.OptionsInput, 17, 1, false).
+			AddItem(ui.endOptionsSeparator()).
+			AddItem(ui.OpeningQuoteText, 1, 1, false).
+			AddItem(ui.ArgumentsInput, 22, 1, false).
+			AddItem(ui.ClosingQuoteText, 1, 1, false).
+			AddItem(ui.endArgumentsSeparator()).
+			AddItem(ui.FileOptionsText, 0, 1, false).
+			AddItem(tview.NewBox().SetBackgroundColor(ui.Theme.BackGroundColor), 2, 1, false)
+
+	}
 	ui.ChildFlex.SetBackgroundColor(ui.Theme.BackGroundColor)
 }
 
 // Function for configuring Flex Flex
 func (ui *UI) configFlex() {
 
-	ui.Flex.AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
-		AddItem(tview.NewBox().SetBackgroundColor(ui.Theme.BackGroundColor), 2, 1, false).
-		AddItem(ui.ChildFlex, 3, 1, false).
-		AddItem(tview.NewFlex().SetDirection(tview.FlexColumn).
-			AddItem(ui.OutputView, 0, 10, false).
-			AddItem(ui.FileOptionsTreeView, 0, 2, false), 0, 1, false), 0, 1, false)
+	if ui.hideFileElements {
+		ui.Flex.AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
+			AddItem(tview.NewBox().SetBackgroundColor(ui.Theme.BackGroundColor), 2, 1, false).
+			AddItem(ui.ChildFlex, 3, 1, false).
+			AddItem(tview.NewFlex().SetDirection(tview.FlexColumn).
+				AddItem(ui.OutputView, 0, 10, false), 0, 1, false), 0, 1, false)
+	} else {
+		ui.Flex.AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
+			AddItem(tview.NewBox().SetBackgroundColor(ui.Theme.BackGroundColor), 2, 1, false).
+			AddItem(ui.ChildFlex, 3, 1, false).
+			AddItem(tview.NewFlex().SetDirection(tview.FlexColumn).
+				AddItem(ui.OutputView, 0, 10, false).
+				AddItem(ui.FileOptionsTreeView, 0, 2, false), 0, 1, false), 0, 1, false)
+	}
 	ui.Flex.SetBorder(true)
 	ui.Flex.SetTitle(" play ")
 	ui.Flex.SetBackgroundColor(ui.Theme.BackGroundColor)
 	ui.Flex.SetTitleColor(ui.Theme.TitleColor)
 	ui.Flex.SetBorderColor(ui.Theme.BorderColor)
-
 }
 
 // Initialize UI
 func (ui *UI) InitUI() error {
+
+	go ui.App.QueueUpdateDraw(ui.evaluateExpression())
+	if len(ui.stdinTmpFile) > 0 {
+		ui.FileOptionsText.SetText(ui.stdinTmpFile)
+		ui.hideFileElements = true
+	}
 
 	ui.configCommandText()
 	ui.configQuotes()
@@ -703,11 +781,18 @@ func (ui *UI) InitUI() error {
 			sb.WriteString(ui.OpeningQuoteText.GetText(false))
 			sb.WriteString(ui.getActiveInputText())
 			sb.WriteString(ui.ClosingQuoteText.GetText(false))
-			sb.WriteString(endArgumentsSeparator.GetText(false))
-			sb.WriteString(strings.Join(ui.FileOptionsInputSlice, " "))
-
+			if ui.hideFileElements {
+				_ = os.Remove(ui.stdinTmpFile)
+			} else {
+				sb.WriteString(endArgumentsSeparator.GetText(false))
+				sb.WriteString(strings.Join(ui.FileOptionsInputSlice, " "))
+			}
 			ui.App.Stop()
 			fmt.Println(sb.String())
+		case tcell.KeyCtrlC:
+			if ui.hideFileElements {
+				_ = os.Remove(ui.stdinTmpFile)
+			}
 		}
 		return event
 	})

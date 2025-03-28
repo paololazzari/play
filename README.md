@@ -32,6 +32,8 @@ $ go build -o /usr/local/bin/
 
 ```bash
 ./play <program>
+# or
+cat file | ./play <program>
 ```
 
 N.B. The program must be installed on your machine.
